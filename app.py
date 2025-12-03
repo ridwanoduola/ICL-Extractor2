@@ -78,6 +78,11 @@ if uploaded_file:
         pages_content = "\n---\n".join([r if isinstance(r, str) else "" for r in results])
 
         dfs = [extract_all_data(block, fields) for block in pages_content.split("---")]
+        
+        for i, df in enumerate(dfs):
+            if isinstance(df, pd.DataFrame):
+                df['page'] = i + 1
+                df['row_number'] = range(len(df))
         dfs = [d for d in dfs if isinstance(d, pd.DataFrame)]
 
         final_df = pd.concat(dfs).drop_duplicates().reset_index(drop=True)
