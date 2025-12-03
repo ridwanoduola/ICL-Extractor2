@@ -3,13 +3,12 @@
 import streamlit as st
 import pandas as pd
 from io import BytesIO
-#from pdf2image import convert_from_path
-from pdf2image import convert_from_bytes
-
+from utils import pdf_to_image_buffers
 from extractor_utils import (
     extract_all_data,
     extract_from_image_chunks_parallel
 )
+
 
 st.title("📄 Bank Statement Extractor")
 
@@ -22,22 +21,8 @@ if uploaded_file:
     st.success("PDF uploaded successfully!")
 
     if st.button("🚀 Start Extract"):
-
         with st.spinner("Converting PDF pages to images..."):
-            # Use convert_from_bytes, NOT convert_from_path
-            
-            # Read file content
-            pdf_bytes = uploaded_file.read()
-            pages = convert_from_bytes(pdf_bytes, dpi=300)
-            
-            #pages = convert_from_path(uploaded_file, dpi=300)
-
-            image_buffers = []
-            for page in pages:
-                buf = BytesIO()
-                page.save(buf, format="PNG")
-                buf.seek(0)
-                image_buffers.append(buf)
+            image_buffers = pdf_to_image_buffers(uploaded_file)
 
         st.info(f"{len(image_buffers)} pages converted.")
 
