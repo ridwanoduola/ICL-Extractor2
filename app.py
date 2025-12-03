@@ -82,7 +82,7 @@ if uploaded_file:
         for i, df in enumerate(dfs):
             if isinstance(df, pd.DataFrame):
                 df['page'] = i + 1
-                df['row_number'] = range(len(df))
+                df['row_number'] = range(1, len(df)+1)
         dfs = [d for d in dfs if isinstance(d, pd.DataFrame)]
 
         final_df = pd.concat(dfs).drop_duplicates().reset_index(drop=True)
