@@ -17,7 +17,7 @@ from extractor_utils import (
 )
 
 
-st.title("📄 Bank Statement Extractor")
+st.title("Bank Statement Extractor")
 
 st.write("Upload a PDF and extract structured transaction data.")
 
@@ -27,7 +27,7 @@ if uploaded_file:
     pdf_filename = uploaded_file.name.replace(".pdf", "")
     st.success("PDF uploaded successfully!")
 
-    if st.button("🚀 Start Extract"):
+    if st.button("Start Extract"):
         with st.spinner("Converting PDF pages to images..."):
             image_buffers = pdf_to_image_buffers(uploaded_file)
 
