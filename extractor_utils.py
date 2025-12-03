@@ -118,9 +118,9 @@ def extract_from_image_chunks_parallel(
     poll_base = "https://extraction-api.nanonets.com/files"
     headers = {"Authorization": f"Bearer {api_key}"}
 
-    # -----------------------------
-    # Helper: Count current processing files
-    # -----------------------------
+    # --------------------------------------------------------
+    # Helper: API load count
+    # --------------------------------------------------------
     def get_processing_count() -> int:
         try:
             resp = requests.get(poll_base, headers=headers, timeout=30).json()
@@ -129,21 +129,23 @@ def extract_from_image_chunks_parallel(
                 if f.get("processing_status") == "processing"
             ])
         except Exception:
-            # If check fails, assume API is under load
+            # If failing to check load → assume busy
             return MAX_PROCESSING_LIMIT
 
-    # -----------------------------
-    # Worker: Submit + Poll each chunk
-    # -----------------------------
+    # --------------------------------------------------------
+    # Worker: Submit + Poll
+    # Returns (idx, result)
+    # --------------------------------------------------------
     def process_chunk(args):
 
         idx, buffer = args
         buffer.seek(0)
+
         custom_name = f"{pdf_filename}_page_{idx}.png"
         files = {"file": (custom_name, buffer, "image/png")}
 
         # -----------------------------
-        # Submission Throttling Loop
+        # Throttle if API is overloaded
         # -----------------------------
         backoff = INITIAL_BACKOFF
 
@@ -151,23 +153,25 @@ def extract_from_image_chunks_parallel(
             current_load = get_processing_count()
 
             if current_load < MAX_PROCESSING_LIMIT:
-                break  # safe to submit
+                break
 
-            # Too many jobs in progress → wait
             print(
                 f"[INFO] API busy ({current_load} processing). "
-                f"Waiting {backoff} seconds before submitting page {idx}..."
+                f"Pausing {backoff}s before submitting page {idx}..."
             )
             time.sleep(backoff)
-            backoff = min(backoff * 2, MAX_BACKOFF)  # exponential backoff
+            backoff = min(backoff * 2, MAX_BACKOFF)
 
         # -----------------------------
-        # Submit extraction job
+        # Submit async job
         # -----------------------------
         try:
             submit = requests.post(
-                url, headers=headers, files=files,
-                data=pages_data, timeout=60
+                url,
+                headers=headers,
+                files=files,
+                data=pages_data,
+                timeout=60
             )
             submit.raise_for_status()
 
@@ -175,36 +179,42 @@ def extract_from_image_chunks_parallel(
             poll_url = f"{poll_base}/{record_id}"
 
         except Exception as e:
-            return {"error": True, "chunk": idx, "details": str(e)}
+            return (idx, {"error": True, "chunk": idx, "details": str(e)})
 
         # -----------------------------
-        # Poll until complete
+        # Poll until done
         # -----------------------------
         try:
             while True:
-                r = requests.get(poll_url, headers=headers, timeout=30).json()
-
-                status = r.get("processing_status")
+                resp = requests.get(poll_url, headers=headers, timeout=30).json()
+                status = resp.get("processing_status")
 
                 if status == "completed":
-                    return r.get("content", "")
+                    return (idx, resp.get("content", ""))
 
                 if status in ["failed", "error"]:
-                    return {"error": True, "chunk": idx, "details": r}
+                    return (idx, {"error": True, "chunk": idx, "details": resp})
 
                 time.sleep(5)
 
         except Exception as e:
-            return {"error": True, "chunk": idx, "details": str(e)}
+            return (idx, {"error": True, "chunk": idx, "details": str(e)})
 
-    # -----------------------------
-    # Parallel Execution
-    # -----------------------------
+    # --------------------------------------------------------
+    # Parallel Execution (ORDERED OUTPUT)
+    # --------------------------------------------------------
     with ThreadPoolExecutor(max_workers=max_workers) as exe:
+
         futures = [
             exe.submit(process_chunk, (i + 1, buf))
             for i, buf in enumerate(image_buffers)
         ]
 
-        results = [f.result() for f in as_completed(futures)]
-        return results
+        # Pre-allocate list for ordered results
+        results = [None] * len(image_buffers)
+
+        for future in as_completed(futures):
+            idx, content = future.result()
+            results[idx - 1] = content
+
+    return results
