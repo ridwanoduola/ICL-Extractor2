@@ -55,7 +55,7 @@ if uploaded_file:
         df_headers = max(dfs, key=lambda df: df.shape[1])
         fields = df_headers.columns.tolist()
 
-        st.write("Fields detected:", fields)
+        st.write("Fields detected:", ', '.join(fields))
 
         pages_data = {
             "output_type": "specified-fields",
