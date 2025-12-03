@@ -2,7 +2,14 @@
 
 import streamlit as st
 import pandas as pd
-from io import BytesIO
+from io import BytesIO, StringIO
+from bs4 import BeautifulSoup
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import List, Dict, Any
+import requests
+import json
+
 from utils import pdf_to_image_buffers
 from extractor_utils import (
     extract_all_data,
