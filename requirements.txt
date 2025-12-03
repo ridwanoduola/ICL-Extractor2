@@ -1,0 +1,9 @@
+streamlit
+pdf2image
+requests
+pillow
+pandas
+beautifulsoup4
+lxml
+numpy
+tqdm
