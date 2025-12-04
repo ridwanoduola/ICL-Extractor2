@@ -75,9 +75,9 @@ if uploaded_file:
 
         st.success("Extraction completed!")
 
-        pages_content = "\n---\n".join([r if isinstance(r, str) else "" for r in results])
+        #pages_content = "\n---\n".join([r if isinstance(r, str) else "" for r in results])
 
-        dfs = [extract_all_data(block, fields) for block in pages_content.split("---")]
+        dfs = [extract_all_data(block, fields) for block in results]
         
         for i, df in enumerate(dfs):
             if isinstance(df, pd.DataFrame):
