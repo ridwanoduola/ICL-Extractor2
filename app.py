@@ -58,9 +58,9 @@ if uploaded_file:
         st.write("Fields detected:", ', '.join(fields))
 
         pages_data = {
-            "output_type": "specified-fields",
-            "model": "nanonets-ocr-s",
-            "specified_fields": ", ".join(fields)
+            "output_type": "markdown-financial-docs",
+            "model": "gemini",
+            "custom_instructions": f"The fields of the transaction detail table you are to extract and return in html table tags are {', '.join(fields[:-1])} and {fields[-1]} only."
         }
 
         st.warning("Extracting all pages... This may take several minutes.")
